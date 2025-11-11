@@ -1,7 +1,6 @@
-import 'package:billcheck/components/hive_database.dart';
+import 'package:billcheck/service/hive/hive_database.dart';
 import 'package:billcheck/routes/router_path.dart';
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 class Bill extends StatelessWidget {
   final List<Map<String, dynamic>> items;
@@ -10,7 +9,8 @@ class Bill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = HiveDatabase.instance.loadUser();
+    final user = HiveDatabase.instance.loadCustomerSelected();
+
     final date = '20/10/2023';
     final totalPrice = items.fold<int>(
       0,
@@ -176,15 +176,23 @@ class Bill extends StatelessWidget {
                   ),
 
                   ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       final billItems = saveItemsForBill(items);
-                      HiveDatabase.instance.saveBillItems(
-                        billItems,
-                      ); // Save bill to Hive
+                      // Save bill to Hive
+                      HiveDatabase.instance.saveBill(billItems);
+
+                      // ✅ Clear all item counts
+                      for (var item in items) {
+                        item['count'] = 0;
+                      }
+                      await HiveDatabase.instance.saveAllItems(items);
+
+                      // ✅ Clear selected customer (remove saved user)
+                      // await HiveDatabase.instance.clearCustomerSelected();
 
                       Navigator.pushNamedAndRemoveUntil(
                         context,
-                        RouterPath.login,
+                        RouterPath.dashboard,
                         (route) => false, // Remove all previous pages
                       );
                     },

@@ -1,11 +1,13 @@
-import 'package:billcheck/components/hive_database.dart';
+import 'package:billcheck/service/hive/hive_database.dart';
 import 'package:billcheck/routes/router_path.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:billcheck/providers/provider.dart'; // 👈 or provider_setup.dart
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await HiveDatabase.instance.initHive();
-  runApp(const MyApp());
+  runApp(MultiProvider(providers: providers, child: const MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -16,7 +18,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       // home: LoginPage(),
-      initialRoute: RouterPath.login,
+      initialRoute: RouterPath.splashScreen,
       routes: RouterPath.routes,
     );
   }

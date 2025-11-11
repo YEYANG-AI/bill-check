@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:billcheck/components/hive_database.dart';
+import 'package:billcheck/service/hive/hive_database.dart';
 
-class BillHistoryPage extends StatelessWidget {
-  const BillHistoryPage({super.key});
+class HistoryPage extends StatelessWidget {
+  const HistoryPage({super.key});
 
   Future<List<Map<String, dynamic>>> _loadBills() async {
     return HiveDatabase.instance.loadBillHistory();
@@ -11,24 +11,6 @@ class BillHistoryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        title: const Text(
-          "ປະຫວັດບິນ",
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.blue,
-      ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _loadBills(),
         builder: (context, snapshot) {
