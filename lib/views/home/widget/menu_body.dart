@@ -8,7 +8,7 @@ class MenuBody extends StatelessWidget {
   Widget build(BuildContext context) {
     List<Map<String, dynamic>> items = [
       {'icon': Icons.person, 'label': 'ລູກຄ້າ', 'route': RouterPath.customer},
-      {'icon': Icons.receipt, 'label': 'ໃບບິນ', 'route': RouterPath.customer},
+      {'icon': Icons.receipt, 'label': 'ໃບບິນ', 'route': RouterPath.createBill},
     ];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
@@ -34,7 +34,7 @@ class MenuBody extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(items[index]['icon'], size: 40, color: Colors.blue),
-                    SizedBox(height: 8),
+                    SizedBox(height: 4),
                     Text(
                       items[index]['label'],
                       style: TextStyle(

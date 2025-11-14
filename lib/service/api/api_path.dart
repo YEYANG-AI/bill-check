@@ -4,4 +4,6 @@ class ApiPath {
   static const banner = '$baseUrl/banners';
   static const customer = '$baseUrl/customers';
   static const updateCustomer = '$baseUrl/customers/{id}';
+  static const clothes = '$baseUrl/clothes';
+  static const washingMachines = '$baseUrl/washing-machines'; //post
 }

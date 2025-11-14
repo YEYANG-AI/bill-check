@@ -8,23 +8,7 @@ class HiveDatabase {
   late Box customerBox;
   late Box billBox;
   late Box itemsBox;
-
-/*************  ✨ Windsurf Command ⭐  *************/
-  /// Initialize Hive database.
-  ///
-  /// This function initializes the Hive database by opening all the
-  /// required boxes. This function should be called before any other
-  /// operations can be performed on the database.
-  ///
-  /// All the boxes are opened asynchronously and the function returns
-  /// a Future that completes when all the boxes have been opened.
-  ///
-  /// This function should only be called once. After calling this function,
-  /// the boxes can be accessed using the properties of this class.
-  ///
-  /// Throws a [StateError] if the database has already been initialized.
-  ///
-/*******  b1e43fc8-3c8b-4e33-ade2-48f558b5b18f  *******/  Future<void> initHive() async {
+  Future<void> initHive() async {
     await Hive.initFlutter();
     userBox = await Hive.openBox('userBox');
     customerBox = await Hive.openBox('customerBox');

@@ -1,85 +1,322 @@
+import 'package:billcheck/model/customer_models.dart';
 import 'package:billcheck/views/bill/view/bill.dart';
 import 'package:flutter/material.dart';
-import '../../../service/hive/hive_database.dart'; // your hive class
+import 'package:provider/provider.dart';
+import 'package:billcheck/viewmodel/clothes_view_model.dart';
 
 class ClothesView extends StatefulWidget {
   const ClothesView({super.key});
 
   @override
-  State<ClothesView> createState() => _HomePageState();
+  State<ClothesView> createState() => _ClothesViewState();
 }
 
-class _HomePageState extends State<ClothesView> {
-  List<Map<String, dynamic>> items = [];
-
-  int totalPrice = 0;
-  final HiveDatabase hiveDatabase = HiveDatabase.instance; // ✅ Hive instance
+class _ClothesViewState extends State<ClothesView> {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Get the customer from arguments
+    final customer = ModalRoute.of(context)?.settings.arguments as Customer?;
+    if (customer != null) {
+      context.read<ClothesViewModel>().setCustomer(customer);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    loadItemsFromHive();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ClothesViewModel>().loadItems();
+    });
   }
 
-  void loadItemsFromHive() async {
-    await hiveDatabase.initHive();
-    items = await hiveDatabase.loadAllItems();
-    calculateTotal();
-    setState(() {});
-  }
-
-  void saveAllItemsToHive() async {
-    await hiveDatabase.saveAllItems(items);
-  }
-
-  void clearAllItems() async {
-    await hiveDatabase.clearAll();
-  }
-
-  void calculateTotal() {
-    totalPrice = 0;
-    for (var item in items) {
-      totalPrice += (item['price'] as int) * (item['count'] as int);
+  // Add customer info widget
+  Widget _buildCustomerInfo(ClothesViewModel viewModel) {
+    if (!viewModel.hasCustomer) {
+      return Container(); // Or show a message to select customer
     }
-  }
 
-  void updateTotal() {
-    totalPrice = 0;
-    for (var item in items) {
-      totalPrice += (item['price'] as int) * (item['count'] as int);
-    }
-  }
-
-  Widget clearSelectItem() {
-    return AlertDialog(
-      title: const Text('ຕ້ອງການລົບລາຍການທີ່ເລື່ອກທັງໝົດແທ້ບໍ່?'),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          child: const Text('ຍົກເລີກ'),
+    final customer = viewModel.selectedCustomer!;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Row(
+            children: [
+              const Icon(Icons.person, color: Colors.blue),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      customer.name,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(customer.tel, style: const TextStyle(fontSize: 14)),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, color: Colors.red),
+                onPressed: () {
+                  viewModel.clearCustomer();
+                  Navigator.pop(context); // Go back to customer selection
+                },
+              ),
+            ],
+          ),
         ),
-        ElevatedButton(
-          onPressed: () {
-            setState(() {
-              for (var item in items) {
-                item['count'] = 0;
-              }
-              updateTotal();
-              hiveDatabase.saveAllItems(items);
-            });
-            Navigator.pop(context);
-          },
-          child: const Text('ຕົກລົງ'),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget addProductDialog() {
+  // In your _handleSaveButton method in ClothesView
+  void _handleSaveButton(
+    BuildContext context,
+    ClothesViewModel viewModel,
+  ) async {
+    if (!viewModel.hasCustomer) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('ກະລຸນາເລືອກລູກຄ້າກ່ອນ')));
+      return;
+    }
+
+    if (viewModel.totalPrice == 0) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('ກະລຸນາເລືອກເຄື່ອງກ່ອນ')));
+      return;
+    }
+
+    // Show confirmation dialog
+    final shouldProceed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ຢືນຢັນການບັນທຶກ'),
+        content: Text(
+          'ທ່ານຕ້ອງການບັນທຶກລາຍການໃຫ້ ${viewModel.selectedCustomer!.name} ແທ້ບໍ່?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ຍົກເລີກ'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('ຕົກລົງ'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldProceed != true) return;
+
+    // Send order to backend
+    final success = await viewModel.sendOrder();
+
+    if (success) {
+      // Navigate to Bill page on success with all required parameters
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => Bill(
+            items: viewModel.selectedItems,
+            orderData: viewModel.getOrderDataForDisplay(), // Pass order data
+            customer: viewModel.selectedCustomer!, // Pass customer object
+          ),
+        ),
+      ).then((_) {
+        // Clear selection after returning from bill
+        viewModel.clearAllCounts();
+      });
+    } else {
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('ບໍ່ສາມາດສົ່ງຂໍ້ມູນ: ${viewModel.error}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Widget _buildLoadingState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 16),
+          Text('ກຳລັງໂຫຼດຂໍ້ມູນ...'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 64, color: Colors.red),
+          const SizedBox(height: 16),
+          const Text(
+            'ເກີດຂໍ້ຜິດພາດ',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32.0),
+            child: Text(
+              error,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () {
+              context.read<ClothesViewModel>().loadItems();
+            },
+            child: const Text('ລອງໃໝ່'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductGrid(ClothesViewModel viewModel) {
+    return GridView.count(
+      crossAxisCount: 4,
+      crossAxisSpacing: 8,
+      mainAxisSpacing: 12,
+      padding: const EdgeInsets.all(8),
+      childAspectRatio: 1,
+      children: List.generate(viewModel.items.length, (index) {
+        final item = viewModel.items[index];
+        return GestureDetector(
+          onTap: () {
+            viewModel.incrementItemCount(index);
+          },
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 2,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        item['name'],
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        '${item['price']} ກີບ',
+                        style: const TextStyle(fontSize: 14),
+                        maxLines: 1,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if ((item['count'] as int) > 0)
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: GestureDetector(
+                    onTap: () {
+                      viewModel.decrementItemCount(index);
+                    },
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(14),
+                          bottomRight: Radius.circular(12),
+                          bottomLeft: Radius.circular(12),
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(4),
+                      child: const Icon(
+                        Icons.remove,
+                        size: 20,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              if ((item['count'] as int) > 0)
+                Positioned(
+                  bottom: -8,
+                  right: 0,
+                  child: Container(
+                    height: 36,
+                    width: 80,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.blue,
+                      borderRadius: const BorderRadius.only(
+                        topRight: Radius.circular(12),
+                        bottomLeft: Radius.circular(14),
+                      ),
+                    ),
+                    child: Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            "ຈຳນວນ",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            "${item['count']}",
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _addProductDialog(ClothesViewModel viewModel) {
     final TextEditingController nameController = TextEditingController();
     final TextEditingController priceController = TextEditingController();
+
     return AlertDialog(
       title: const Text('ເພີ່ມລາຍການໃໝ່'),
       content: Column(
@@ -99,9 +336,7 @@ class _HomePageState extends State<ClothesView> {
       ),
       actions: [
         TextButton(
-          onPressed: () {
-            Navigator.pop(context); // close dialog
-          },
+          onPressed: () => Navigator.pop(context),
           child: const Text('ຍົກເລີກ'),
         ),
         ElevatedButton(
@@ -109,18 +344,10 @@ class _HomePageState extends State<ClothesView> {
             final String name = nameController.text.trim();
             final int? price = int.tryParse(priceController.text.trim());
 
-            if (name.isNotEmpty && price != null) {
-              setState(() {
-                final newItem = {'name': name, 'price': price, 'count': 0};
-                items.add(newItem);
-                updateTotal();
-
-                // Save the new item to Hive
-                hiveDatabase.saveAllItems(items);
-              });
-              Navigator.pop(context); // close dialog
+            if (name.isNotEmpty && price != null && price > 0) {
+              viewModel.addNewItem(name, price);
+              Navigator.pop(context);
             } else {
-              // show error if invalid
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('ກະລຸນາໃສ່ຊື່ແລະລາຄາຖືກຕ້ອງ')),
               );
@@ -132,329 +359,185 @@ class _HomePageState extends State<ClothesView> {
     );
   }
 
-  // Your old build method remains completely unchanged
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.blue,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+  Widget _clearSelectItemDialog(ClothesViewModel viewModel) {
+    return AlertDialog(
+      title: const Text('ຕ້ອງການລົບລາຍການທີ່ເລື່ອກທັງໝົດແທ້ບໍ່?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('ຍົກເລີກ'),
+        ),
+        ElevatedButton(
           onPressed: () {
+            viewModel.clearAllCounts();
             Navigator.pop(context);
           },
+          child: const Text('ຕົກລົງ'),
         ),
-        title: const Text(
-          'Alinda Mary Laundry',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Container(
-              height: 40,
-              width: 40,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.3),
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.add, color: Colors.white),
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (_) => addProductDialog(),
-                  );
-                },
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ClothesViewModel>(
+      builder: (context, viewModel, child) {
+        return Scaffold(
+          appBar: AppBar(
+            backgroundColor: Colors.blue,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: const Text(
+              'Alinda Mary Laundry',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
             ),
-          ),
-        ],
-      ),
-
-      body: Container(
-        color: const Color.fromRGBO(255, 255, 255, 1),
-        child: Column(
-          children: [
-            Expanded(
-              child: GridView.count(
-                crossAxisCount: 4,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 12,
-                padding: const EdgeInsets.all(8),
-                childAspectRatio: 1,
-                children: List.generate(items.length, (index) {
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        items[index]['count'] =
-                            (items[index]['count'] as int) + 1;
-                        updateTotal();
-                        hiveDatabase.saveAllItems(items);
-                      });
-                    },
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 2,
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  items[index]['name'],
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                ),
-                                Text(
-                                  items[index]['price'].toString(),
-                                  style: TextStyle(fontSize: 14),
-                                  maxLines: 1,
-                                ),
-                              ],
-                            ),
+            centerTitle: true,
+            actions: [
+              if (viewModel.isLoading)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Container(
+                    height: 40,
+                    width: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
                           ),
                         ),
-                        if ((items[index]['count'] as int) > 0)
-                          Positioned(
-                            top: 0,
-                            right: 0,
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  if ((items[index]['count'] as int) > 0) {
-                                    items[index]['count'] =
-                                        (items[index]['count'] as int) - 1;
-                                    updateTotal();
-                                  }
-                                });
-                              },
-                              child: Container(
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  borderRadius: BorderRadius.only(
-                                    topLeft: Radius.circular(14),
-                                    bottomRight: Radius.circular(12),
-                                    bottomLeft: Radius.circular(12),
-                                  ),
-                                ),
-                                padding: const EdgeInsets.all(4),
-                                child: const Icon(
-                                  Icons.remove,
-                                  size: 20,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                        if ((items[index]['count'] as int) > 0)
-                          Positioned(
-                            bottom: -8,
-                            right: 0,
-                            child: Container(
-                              height: 36,
-                              width: 80,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.blue,
-                                borderRadius: const BorderRadius.only(
-                                  topRight: Radius.circular(12),
-                                  bottomLeft: Radius.circular(14),
-                                ),
-                              ),
-                              child: Center(
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      "ຈຳນວນ",
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      maxLines: 1,
-                                    ),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      "${items[index]['count']}",
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                }),
-              ),
-            ),
-            // Padding(
-            //   padding: const EdgeInsets.symmetric(horizontal: 10),
-            //   child: SizedBox(
-            //     child: Row(
-            //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            //       children: [
-            //         GestureDetector(
-            //           onTap: () {
-            //             showDialog(
-            //               context: context,
-            //               builder: (context) {
-            //                 return AlertDialog(
-            //                   title: const Text(
-            //                     'ຕ້ອງການລົບລາຍການທັງໝົດແທ້ບໍ່?',
-            //                     style: TextStyle(fontSize: 18),
-            //                   ),
-            //                   actions: [
-            //                     TextButton(
-            //                       onPressed: () {
-            //                         Navigator.pop(context);
-            //                       },
-            //                       child: const Text('ຍົກເລີກ'),
-            //                     ),
-            //                     ElevatedButton(
-            //                       onPressed: () {
-            //                         hiveDatabase.clearAll();
-            //                         setState(() {
-            //                           loadItemsFromHive();
-            //                         });
-            //                         Navigator.pop(context);
-            //                       },
-            //                       child: const Text('ຕົກລົງ'),
-            //                     ),
-            //                   ],
-            //                 );
-            //               },
-            //             );
-            //           },
-            //           child: Container(
-            //             height: 40,
-            //             decoration: BoxDecoration(
-            //               color: Colors.red,
-            //               borderRadius: BorderRadius.circular(8),
-            //             ),
-            //             child: const Center(
-            //               child: Text(
-            //                 'ລົບລາຍການທັງໝົດ',
-            //                 style: TextStyle(fontSize: 16, color: Colors.white),
-            //               ),
-            //             ),
-            //           ),
-            //         ),
-
-            //         GestureDetector(
-            //           onTap: () {
-            //             showDialog(
-            //               context: context,
-            //               builder: (_) => clearSelectItem(),
-            //             );
-            //           },
-            //           child: Container(
-            //             height: 40,
-            //             decoration: BoxDecoration(
-            //               color: Colors.red,
-            //               borderRadius: BorderRadius.circular(8),
-            //             ),
-            //             child: const Center(
-            //               child: Text(
-            //                 'ລົບລາຄາທີ່ເລື່ອກທັງໝົດ',
-            //                 style: TextStyle(fontSize: 16, color: Colors.white),
-            //               ),
-            //             ),
-            //           ),
-            //         ),
-            //       ],
-            //     ),
-            //   ),
-            // ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    'ລວມທັງໝົດ: $totalPrice ກີບ',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              child: GestureDetector(
-                onTap: () {
-                  if (totalPrice != 0) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => Bill(items: items),
                       ),
-                    ).then((_) {
-                      // Reset counts after returning from bill page
-                      setState(() {
-                        for (var item in items) {
-                          item['count'] = 0;
-                        }
-                        updateTotal();
-                        hiveDatabase.saveAllItems(
-                          items,
-                        ); // optional if you want to save cleared state
-                      });
-                    });
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('ເຄື່ອງຫ້າມວ່າງ')),
-                    );
-                  }
-                },
-                child: Container(
-                  height: 60,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.blue,
-                    borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
-                  child: const Center(
-                    child: Text(
-                      'ບັນທຶກ',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white, fontSize: 28),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Container(
+                    height: 40,
+                    width: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.add, color: Colors.white),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (_) => _addProductDialog(viewModel),
+                        );
+                      },
                     ),
                   ),
                 ),
-              ),
+            ],
+          ),
+          body: Container(
+            color: const Color.fromRGBO(255, 255, 255, 1),
+            child: Column(
+              children: [
+                _buildCustomerInfo(viewModel),
+                Expanded(
+                  child: viewModel.isLoading
+                      ? _buildLoadingState()
+                      : viewModel.error.isNotEmpty
+                      ? _buildErrorState(viewModel.error)
+                      : _buildProductGrid(viewModel),
+                ),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'ລວມທັງໝົດ: ${viewModel.totalPrice} ກີບ',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (viewModel.selectedItems.isNotEmpty)
+                        TextButton(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (_) => _clearSelectItemDialog(viewModel),
+                            );
+                          },
+                          child: const Text(
+                            'ລ້າງທັງໝົດ',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  child: GestureDetector(
+                    onTap: () => _handleSaveButton(context, viewModel),
+                    child: Container(
+                      height: 60,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: viewModel.totalPrice > 0
+                            ? Colors.blue
+                            : Colors.grey,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: viewModel.isSendingOrder
+                          ? const Center(
+                              child: SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : const Center(
+                              child: Text(
+                                'ບັນທຶກ',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 28,
+                                ),
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 40),
+              ],
             ),
-            SizedBox(height: 40),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

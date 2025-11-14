@@ -1,17 +1,28 @@
 import 'package:billcheck/service/hive/hive_database.dart';
 import 'package:billcheck/routes/router_path.dart';
 import 'package:flutter/material.dart';
+import 'package:billcheck/model/customer_models.dart'; // Add this import
 
 class Bill extends StatelessWidget {
   final List<Map<String, dynamic>> items;
+  final Map<String, dynamic> orderData; // Add this parameter
+  final Customer? customer; // Add customer parameter (optional)
 
-  const Bill({super.key, required this.items});
+  const Bill({
+    super.key,
+    required this.items,
+    required this.orderData, // Add to constructor
+    this.customer, // Make it optional for backward compatibility
+  });
 
   @override
   Widget build(BuildContext context) {
-    final user = HiveDatabase.instance.loadCustomerSelected();
+    // Use the passed customer or fall back to Hive
+    final user = customer != null
+        ? {'name': customer!.name, 'phone': customer!.tel}
+        : HiveDatabase.instance.loadCustomerSelected();
 
-    final date = '20/10/2023';
+    final date = DateTime.now().toString().substring(0, 10); // Use current date
     final totalPrice = items.fold<int>(
       0,
       (sum, item) => sum + (item['count'] as int) * (item['price'] as int),
@@ -21,7 +32,7 @@ class Bill extends StatelessWidget {
       List<Map<String, dynamic>> items,
     ) {
       return items
-          .where((item) => item['count'] > 0) // optional filter
+          .where((item) => item['count'] > 0)
           .map(
             (item) => {
               'name': item['name'],
@@ -63,6 +74,41 @@ class Bill extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
 
+                  // Display order data that was sent to backend
+                  // if (orderData.isNotEmpty) ...[
+                  //   Padding(
+                  //     padding: const EdgeInsets.symmetric(horizontal: 16),
+                  //     child: Container(
+                  //       padding: const EdgeInsets.all(12),
+                  //       decoration: BoxDecoration(
+                  //         color: Colors.grey[100],
+                  //         borderRadius: BorderRadius.circular(8),
+                  //         border: Border.all(color: Colors.blue),
+                  //       ),
+                  //       child: Column(
+                  //         crossAxisAlignment: CrossAxisAlignment.start,
+                  //         children: [
+                  //           const Text(
+                  //             'ຂໍ້ມູນທີ່ສົ່ງໄປຍັງຖານຂໍ້ມູນ:',
+                  //             style: TextStyle(
+                  //               fontWeight: FontWeight.bold,
+                  //               color: Colors.blue,
+                  //             ),
+                  //           ),
+                  //           const SizedBox(height: 4),
+                  //           Text('Customer ID: ${orderData['customer_id']}'),
+                  //           ...orderData['details'].map<Widget>((detail) {
+                  //             return Text(
+                  //               '• Clothes ID: ${detail['clothes_id']}, Quantity: ${detail['quantity']}',
+                  //               style: const TextStyle(fontSize: 12),
+                  //             );
+                  //           }).toList(),
+                  //         ],
+                  //       ),
+                  //     ),
+                  //   ),
+                  //   const SizedBox(height: 16),
+                  // ],
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Column(
@@ -188,7 +234,7 @@ class Bill extends StatelessWidget {
                       await HiveDatabase.instance.saveAllItems(items);
 
                       // ✅ Clear selected customer (remove saved user)
-                      // await HiveDatabase.instance.clearCustomerSelected();
+                      await HiveDatabase.instance.clearCustomerSelected();
 
                       Navigator.pushNamedAndRemoveUntil(
                         context,

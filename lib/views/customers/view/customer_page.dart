@@ -1,6 +1,7 @@
 import 'package:billcheck/model/customer_models.dart';
 import 'package:billcheck/routes/router_path.dart';
 import 'package:billcheck/service/customer_service/customer_service.dart';
+import 'package:billcheck/service/hive/hive_database.dart';
 import 'package:flutter/material.dart';
 
 class CustomerPage extends StatefulWidget {
@@ -36,17 +37,9 @@ class _CustomerPageState extends State<CustomerPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Customers'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => _loadCustomers(),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Customers')),
       body: customers.isEmpty
-          ? const Center(child: Text('No customers found'))
+          ? Center(child: CircularProgressIndicator(color: Colors.blue))
           : ListView.builder(
               itemCount: customers.length,
               itemBuilder: (context, index) {
@@ -55,13 +48,38 @@ class _CustomerPageState extends State<CustomerPage> {
                   child: ListTile(
                     title: Text('${c.name} ${c.surname}'),
                     subtitle: Text(c.tel),
-                    onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        RouterPath.clothesview,
-                        arguments: c,
+                    onTap: () async {
+                      await HiveDatabase.instance.saveCustomerSelected(
+                        c.name,
+                        c.tel,
                       );
+                      // Navigator.pushNamed(
+                      //   context,
+                      //   RouterPath.clothesview,
+                      //   arguments: c,
+                      // );
+                      print('Customer selected: ${c.name}');
+                      print('Customer selected: ${c.id}');
                     },
+                    trailing: SizedBox(
+                      width: 100,
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            onPressed: () {
+                              // Edit customer logic
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () {
+                              // Delete customer logic
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 );
               },
