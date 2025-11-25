@@ -1,4 +1,4 @@
-import 'package:billcheck/model/user_models.dart';
+import 'package:billcheck/model/login_models.dart';
 import 'package:billcheck/service/auth_service/auth_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';

@@ -145,7 +145,16 @@ class _BannerBodyState extends State<BannerBody> {
   }
 
   Widget _buildEmptyState() {
-    return Center(child: CircularProgressIndicator(color: Colors.blue));
+    return Container(
+      color: Colors.grey[200],
+      height: 200,
+      child: Center(
+        child: Text(
+          'ບໍ່ມີໂປຣໂມຊັ່ນ',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
   }
 
   @override
@@ -155,6 +164,11 @@ class _BannerBodyState extends State<BannerBody> {
         // Loading state
         if (viewModel.isLoading) {
           return _buildLoadingIndicator();
+        }
+
+        // Empty state
+        if (viewModel.banners.isEmpty) {
+          return _buildEmptyState();
         }
 
         // Error state

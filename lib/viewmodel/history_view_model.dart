@@ -41,10 +41,15 @@ class HistoryViewModel with ChangeNotifier {
         _orders.addAll(response.data);
       }
 
-      // Check if there are more pages
-      final totalPages = response.pagination['total_pages'] ?? 1;
-      _hasMore = _currentPage < totalPages;
-      _currentPage++;
+      // Handle pagination safely
+      if (response.pagination != null && response.pagination!.isNotEmpty) {
+        final totalPages = response.pagination!['total_pages'] ?? 1;
+        _hasMore = _currentPage < totalPages;
+        _currentPage++;
+      } else {
+        // If no pagination info, assume it's all loaded
+        _hasMore = false;
+      }
 
       _isLoading = false;
       notifyListeners();

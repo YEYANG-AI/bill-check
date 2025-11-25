@@ -94,7 +94,6 @@ class _ClothesViewState extends State<ClothesView> {
       return;
     }
 
-    // Show confirmation dialog
     final shouldProceed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -117,26 +116,21 @@ class _ClothesViewState extends State<ClothesView> {
 
     if (shouldProceed != true) return;
 
-    // Send order to backend
-    final success = await viewModel.sendOrder();
+    final orderId = await viewModel.sendOrder();
 
-    if (success) {
-      // Navigate to Bill page on success with all required parameters
+    if (orderId != null) {
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => Bill(
-            items: viewModel.selectedItems,
-            orderData: viewModel.getOrderDataForDisplay(), // Pass order data
-            customer: viewModel.selectedCustomer!, // Pass customer object
+            orderId: orderId, // Only pass order ID
+            customer: viewModel.selectedCustomer!,
           ),
         ),
       ).then((_) {
-        // Clear selection after returning from bill
         viewModel.clearAllCounts();
       });
     } else {
-      // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('ບໍ່ສາມາດສົ່ງຂໍ້ມູນ: ${viewModel.error}'),
@@ -204,6 +198,7 @@ class _ClothesViewState extends State<ClothesView> {
           onTap: () {
             viewModel.incrementItemCount(index);
           },
+
           child: Stack(
             clipBehavior: Clip.none,
             children: [
@@ -345,7 +340,7 @@ class _ClothesViewState extends State<ClothesView> {
             final int? price = int.tryParse(priceController.text.trim());
 
             if (name.isNotEmpty && price != null && price > 0) {
-              viewModel.addNewItem(name, price);
+              viewModel.addColthes(name, price);
               Navigator.pop(context);
             } else {
               ScaffoldMessenger.of(context).showSnackBar(

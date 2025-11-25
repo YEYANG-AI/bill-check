@@ -1,5 +1,6 @@
 import 'package:billcheck/routes/router_path.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 class MenuBody extends StatelessWidget {
   const MenuBody({super.key});
@@ -9,6 +10,11 @@ class MenuBody extends StatelessWidget {
     List<Map<String, dynamic>> items = [
       {'icon': Icons.person, 'label': 'ລູກຄ້າ', 'route': RouterPath.customer},
       {'icon': Icons.receipt, 'label': 'ໃບບິນ', 'route': RouterPath.createBill},
+      {
+        'icon': LucideIcons.shirt,
+        'label': 'ເຄື່ອງ',
+        'route': RouterPath.clothesManagement,
+      },
     ];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),

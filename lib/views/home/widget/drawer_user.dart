@@ -1,6 +1,7 @@
-import 'package:billcheck/model/user_models.dart';
+import 'package:billcheck/model/user_model.dart';
 import 'package:billcheck/routes/router_path.dart';
 import 'package:billcheck/viewmodel/login_view_model.dart';
+import 'package:billcheck/viewmodel/user_view_model.dart';
 import 'package:billcheck/views/history/page/history_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -10,8 +11,8 @@ class DrawerUser extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<LoginViewModel>(context, listen: true);
-    User? user = provider.user;
+    final provider = Provider.of<UserViewModel>(context, listen: true);
+    UserModel? user = provider.user;
 
     Widget logoutDialog() {
       return AlertDialog(
@@ -25,12 +26,31 @@ class DrawerUser extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              provider.logout();
+              final logoutProvider = Provider.of<LoginViewModel>(
+                context,
+                listen: false,
+              );
+              logoutProvider.logout();
               Navigator.pushNamedAndRemoveUntil(
                 context,
                 RouterPath.login,
                 (route) => false,
               );
+            },
+            child: const Text('ຕົກລົງ'),
+          ),
+        ],
+      );
+    }
+
+    Widget updateProfileDialog() {
+      return AlertDialog(
+        title: const Text('ອັບເດດໂປຣໄຟລ໌'),
+        content: const Text('ຟັງຊັນນີ້ຍັງບໍ່ໄດ້ຖືກນຳໃຊ້.'),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
             },
             child: const Text('ຕົກລົງ'),
           ),
@@ -60,10 +80,70 @@ class DrawerUser extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
             child: Row(
               children: [
-                const CircleAvatar(
-                  radius: 35,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.person, size: 40, color: Colors.blue),
+                Stack(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: CircleAvatar(
+                        radius: 35,
+                        backgroundColor: Colors.white,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(35),
+                          child: user?.profile?.imageUrl != null
+                              ? Image.network(
+                                  user!.profile.imageUrl,
+                                  fit: BoxFit.cover,
+                                  width: 70,
+                                  height: 70,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(
+                                      Icons.person,
+                                      size: 40,
+                                      color: Colors.grey.shade600,
+                                    );
+                                  },
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                        if (loadingProgress == null)
+                                          return child;
+                                        return CircularProgressIndicator(
+                                          value:
+                                              loadingProgress
+                                                      .expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                        .cumulativeBytesLoaded /
+                                                    loadingProgress
+                                                        .expectedTotalBytes!
+                                              : null,
+                                        );
+                                      },
+                                )
+                              : Icon(
+                                  Icons.person,
+                                  size: 40,
+                                  color: Colors.grey.shade600,
+                                ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: -14,
+                      right: -12,
+                      child: IconButton(
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => updateProfileDialog(),
+                          );
+                        },
+                        icon: Icon(Icons.camera_alt, color: Colors.grey),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(width: 16),
                 Column(
@@ -82,6 +162,22 @@ class DrawerUser extends StatelessWidget {
                       user?.email ?? 'ອີເມວ',
                       style: TextStyle(color: Colors.white70, fontSize: 14),
                     ),
+                    SizedBox(height: 4),
+                    if (user?.userNo != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          user!.userNo,
+                          style: TextStyle(color: Colors.white, fontSize: 12),
+                        ),
+                      ),
                   ],
                 ),
               ],
@@ -96,7 +192,12 @@ class DrawerUser extends StatelessWidget {
                 _buildDrawerItem(
                   icon: Icons.home_rounded,
                   text: 'ໜ້າຫຼັກ',
-                  onTap: () => Navigator.pop(context),
+                  onTap: () {
+                    Navigator.pushReplacementNamed(
+                      context,
+                      RouterPath.dashboard,
+                    );
+                  },
                 ),
                 _buildDrawerItem(
                   icon: Icons.history_rounded,

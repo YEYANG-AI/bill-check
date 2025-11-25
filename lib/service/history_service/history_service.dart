@@ -22,6 +22,8 @@ class HistoryService {
       );
 
       if (response.statusCode == 200) {
+        print('response.statusCode fetcing: ${response.statusCode}');
+        print('response.body fetcing: ${response.body}');
         final jsonResponse = jsonDecode(response.body);
         return HistoryResponse.fromJson(jsonResponse);
       } else {
@@ -30,6 +32,9 @@ class HistoryService {
     } catch (e) {
       throw Exception('Error fetching order history: $e');
     }
+  }
+  Future<void> getHistoryById() async {
+    // Implement additional methods as needed
   }
 
   // You can add more methods for filtering, searching, etc.

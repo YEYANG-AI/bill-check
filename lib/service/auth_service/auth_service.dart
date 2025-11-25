@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:billcheck/model/user_models.dart';
+import 'package:billcheck/model/login_models.dart';
 import 'package:billcheck/service/api/api_path.dart';
 import 'package:http/http.dart' as http;
 

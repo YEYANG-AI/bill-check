@@ -1,7 +1,7 @@
 import 'package:billcheck/routes/router_path.dart';
 import 'package:billcheck/viewmodel/login_view_model.dart';
-import 'package:billcheck/views/Auth/widget/login_button.dart';
-import 'package:billcheck/views/Auth/widget/login_text_field.dart';
+import 'package:billcheck/views/Auth/login/widget/login_button.dart';
+import 'package:billcheck/views/Auth/login/widget/login_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 

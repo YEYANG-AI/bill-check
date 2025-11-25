@@ -1,4 +1,5 @@
 import 'package:billcheck/viewmodel/login_view_model.dart';
+import 'package:billcheck/viewmodel/user_view_model.dart';
 import 'package:billcheck/views/home/widget/banner_body.dart';
 import 'package:billcheck/views/home/widget/drawer_user.dart';
 import 'package:billcheck/routes/router_path.dart';
@@ -17,6 +18,9 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<UserViewModel>(context, listen: false).loadUserProfile();
+    });
   }
 
   Widget logoutDialog() {
@@ -47,8 +51,6 @@ class _HomeViewState extends State<HomeView> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<LoginViewModel>(context, listen: false);
-
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(

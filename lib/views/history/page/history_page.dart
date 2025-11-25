@@ -81,10 +81,28 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
+  String _formatDate(String? dateString) {
+    if (dateString == null) return 'ບໍ່ຮູ້ວັນທີ';
+
+    try {
+      final date = DateTime.parse(dateString);
+      return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return 'ວັນທີບໍ່ຖືກຕ້ອງ';
+    }
+  }
+
+  Widget _buildEmptyState() {
+    return const Center(
+      child: Text(
+        'ບໍ່ມີປະຫວັດການໃຊ້ງານ',
+        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
   Widget _buildOrderItem(HistoryOrder order) {
-    final date = DateTime.parse(order.createdAt);
-    final formattedDate =
-        '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+    final formattedDate = _formatDate(order.createdAt);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -100,13 +118,13 @@ class _HistoryPageState extends State<HistoryPage> {
           child: const Icon(Icons.receipt, color: Colors.blue),
         ),
         title: Text(
-          order.customer.fullName,
+          order.customer?.fullName ?? 'ບໍ່ຮູ້ຊື່',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("ເບີໂທ: ${order.customer.tel}"),
+            Text("ເບີໂທ: ${order.customer?.tel ?? 'ບໍ່ມີເບີໂທ'}"),
             Text("ວັນທີ: $formattedDate"),
           ],
         ),
@@ -115,7 +133,7 @@ class _HistoryPageState extends State<HistoryPage> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              '${order.total.toStringAsFixed(0)} ກີບ',
+              '${(order.total ?? 0).toStringAsFixed(0)} ກີບ',
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Colors.green,
@@ -136,7 +154,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 const Icon(Icons.store, size: 16, color: Colors.grey),
                 const SizedBox(width: 8),
                 Text(
-                  order.store.name,
+                  order.store.name ?? 'ບໍ່ຮູ້ຊື່ຮ້ານ',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
@@ -155,7 +173,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 ),
                 child: Center(
                   child: Text(
-                    '${detail.quantity}',
+                    '${detail.quantity ?? 0}',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.blue,
@@ -163,23 +181,23 @@ class _HistoryPageState extends State<HistoryPage> {
                   ),
                 ),
               ),
-              title: Text(detail.clothes.name),
+              title: Text(detail.clothes.name ?? 'ບໍ່ຮູ້ຊື່ສິນຄ້າ'),
               subtitle: detail.clothes.price != null
                   ? Text(
                       'ລາຄາ: ${detail.clothes.price!.toStringAsFixed(0)} ກີບ',
                     )
-                  : null,
+                  : const Text('ບໍ່ມີລາຄາ'),
               trailing: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '${detail.total.toStringAsFixed(0)} ກີບ',
+                    '${(detail.total ?? 0).toStringAsFixed(0)} ກີບ',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  if (detail.vat > 0)
+                  if ((detail.vat ?? 0) > 0)
                     Text(
-                      'VAT ${(detail.vat * 100).toStringAsFixed(0)}%',
+                      'VAT ${((detail.vat ?? 0) * 100).toStringAsFixed(0)}%',
                       style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                 ],
@@ -201,16 +219,17 @@ class _HistoryPageState extends State<HistoryPage> {
               children: [
                 _buildSummaryRow(
                   'ລວມຍ່ອຍ:',
-                  '${order.subTotal.toStringAsFixed(0)} ກີບ',
+                  '${(order.subTotal ?? 0).toStringAsFixed(0)} ກີບ',
                 ),
-                _buildSummaryRow(
-                  'VAT (${(order.vat * 100).toStringAsFixed(0)}%):',
-                  '${order.totalVat.toStringAsFixed(0)} ກີບ',
-                ),
+                if ((order.vat ?? 0) > 0)
+                  _buildSummaryRow(
+                    'VAT (${((order.vat ?? 0) * 100).toStringAsFixed(0)}%):',
+                    '${(order.totalVat ?? 0).toStringAsFixed(0)} ກີບ',
+                  ),
                 const Divider(),
                 _buildSummaryRow(
                   'ລວມທັງໝົດ:',
-                  '${order.total.toStringAsFixed(0)} ກີບ',
+                  '${(order.total ?? 0).toStringAsFixed(0)} ກີບ',
                   isTotal: true,
                 ),
               ],
@@ -252,7 +271,7 @@ class _HistoryPageState extends State<HistoryPage> {
       appBar: AppBar(
         backgroundColor: Colors.blue,
         title: const Text(
-          'ປະຫວັດການສັ່ງຊື້',
+          'ປະຫວັດການໃຊ້ງານ',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
@@ -263,6 +282,10 @@ class _HistoryPageState extends State<HistoryPage> {
             return _buildLoadingState();
           }
 
+          if (viewModel.orders.isEmpty) {
+            return _buildEmptyState();
+          }
+
           if (viewModel.error.isNotEmpty && viewModel.orders.isEmpty) {
             return _buildErrorState(viewModel.error);
           }
@@ -271,6 +294,8 @@ class _HistoryPageState extends State<HistoryPage> {
             onRefresh: () async {
               viewModel.refreshHistory();
             },
+            color: Colors.blue,
+            backgroundColor: Colors.white,
             child: ListView.builder(
               controller: _scrollController,
               itemCount: viewModel.orders.length + (viewModel.hasMore ? 1 : 0),

@@ -13,6 +13,7 @@ class CreateBill extends StatefulWidget {
 
 class _CustomerPageState extends State<CreateBill> {
   List<Customer> customers = [];
+  bool isLoading = true; // Added missing isLoading variable
   final TextEditingController _searchController = TextEditingController();
   final CustomerService _service = CustomerService();
 
@@ -27,18 +28,58 @@ class _CustomerPageState extends State<CreateBill> {
       final allCustomers = await _service.fetchCustomers();
       setState(() {
         customers = allCustomers;
+        isLoading = false; // Set loading to false when data is loaded
       });
     } catch (e) {
       print('Error loading customers: $e');
+      setState(() {
+        isLoading = false; // Set loading to false even on error
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Customers'), centerTitle: true),
-      body: customers.isEmpty
+      appBar: AppBar(
+        backgroundColor: Colors.blue,
+        leading: IconButton(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          icon: Icon(Icons.arrow_back_ios_new, color: Colors.white),
+        ),
+        title: const Text(
+          'ສ້າງໃບບິນ',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+      ),
+      body: isLoading
           ? Center(child: CircularProgressIndicator(color: Colors.blue))
+          : customers.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.people_outline, size: 80, color: Colors.grey[400]),
+                  SizedBox(height: 16),
+                  Text(
+                    'ບໍ່ມີລູກຄ້າ',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'ກະລຸນາເພີ່ມລູກຄ້າກ່ອນເພື່ອເລີ່ມສ້າງໃບບິນ',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                  ),
+                ],
+              ),
+            )
           : ListView.builder(
               itemCount: customers.length,
               itemBuilder: (context, index) {

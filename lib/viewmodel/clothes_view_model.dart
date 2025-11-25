@@ -4,31 +4,23 @@ import 'package:billcheck/model/laundry_model.dart';
 import 'package:billcheck/service/clothes_service/clothes_service.dart';
 import 'package:billcheck/service/laundry_service/laundry_service.dart';
 import 'package:flutter/foundation.dart';
-import 'package:billcheck/service/hive/hive_database.dart';
 
 class ClothesViewModel with ChangeNotifier {
-  final HiveDatabase _hiveDatabase = HiveDatabase.instance;
   final ClothesService _clothesService = ClothesService();
   final OrderService _orderService = OrderService();
 
   List<Map<String, dynamic>> _items = [];
   bool _isLoading = false;
   String _error = '';
-
-  //---- for laundry service
-
   bool _isSendingOrder = false;
   Customer? _selectedCustomer;
-
-  bool get isSendingOrder => _isSendingOrder;
-  Customer? get selectedCustomer => _selectedCustomer;
-  bool get hasCustomer => _selectedCustomer != null;
-
-  //-----end
 
   List<Map<String, dynamic>> get items => _items;
   bool get isLoading => _isLoading;
   String get error => _error;
+  bool get isSendingOrder => _isSendingOrder;
+  Customer? get selectedCustomer => _selectedCustomer;
+  bool get hasCustomer => _selectedCustomer != null;
 
   void setCustomer(Customer customer) {
     _selectedCustomer = customer;
@@ -40,38 +32,25 @@ class ClothesViewModel with ChangeNotifier {
     notifyListeners();
   }
 
-  // Load items from API first, then fall back to Hive
   Future<void> loadItems() async {
     _isLoading = true;
     _error = '';
     notifyListeners();
 
     try {
-      // Try to load from API first
       final apiItems = await _clothesService.fetchItems();
-
-      if (apiItems.isNotEmpty) {
-        _items = apiItems.map((item) {
-          return {
-            'name': item['name'] ?? '',
-            'price': item['price'] is int
-                ? item['price']
-                : int.tryParse(item['price'].toString()) ?? 0,
-            'count': 0, // Initialize count to 0
-            'id': item['id'] ?? item['_id'], // Handle both id formats
-          };
-        }).toList();
-
-        // Save API data to Hive for offline use
-        await _hiveDatabase.saveAllItems(_items);
-      } else {
-        // Fall back to Hive if API returns empty
-        _items = await _hiveDatabase.loadAllItems();
-      }
+      _items = apiItems.map((item) {
+        return {
+          'name': item['name'] ?? '',
+          'price': item['price'] is int
+              ? item['price']
+              : int.tryParse(item['price'].toString()) ?? 0,
+          'count': 0,
+          'id': item['id'] ?? item['_id'],
+        };
+      }).toList();
     } catch (e) {
       _error = e.toString();
-      // Fall back to Hive on error
-      _items = await _hiveDatabase.loadAllItems();
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -114,11 +93,9 @@ class ClothesViewModel with ChangeNotifier {
       'name': name,
       'price': price,
       'count': 0,
-      'id': DateTime.now().millisecondsSinceEpoch, // Temporary local ID
+      'id': DateTime.now().millisecondsSinceEpoch,
     });
     notifyListeners();
-    // Save to Hive immediately
-    _hiveDatabase.saveAllItems(_items);
   }
 
   int get totalPrice {
@@ -133,15 +110,19 @@ class ClothesViewModel with ChangeNotifier {
     return _items.where((item) => (item['count'] as int) > 0).toList();
   }
 
-  //---- for laundry service
-
-  // Add method to create Order object from selected items
   Order _createOrderFromSelectedItems() {
     final orderDetails = <OrderDetail>[];
     for (var item in _items) {
       final count = item['count'] as int;
       if (count > 0) {
-        orderDetails.add(OrderDetail(clothesId: item['id'], quantity: count));
+        orderDetails.add(
+          OrderDetail(
+            clothesId: item['id'] is int
+                ? item['id']
+                : int.tryParse(item['id'].toString()) ?? 0,
+            quantity: count,
+          ),
+        );
       }
     }
 
@@ -149,18 +130,15 @@ class ClothesViewModel with ChangeNotifier {
       throw Exception('No customer selected');
     }
 
-    return Order(
-      customerId: _selectedCustomer!.id, // Use the actual customer ID
-      details: orderDetails,
-    );
+    return Order(customerId: _selectedCustomer!.id, details: orderDetails);
   }
 
-  // Add method to send order
-  Future<bool> sendOrder() async {
+  Future<int?> sendOrder() async {
+    // Changed to return order ID
     if (_selectedCustomer == null) {
       _error = 'ກະລຸນາເລືອກລູກຄ້າກ່ອນ';
       notifyListeners();
-      return false;
+      return null;
     }
 
     _isSendingOrder = true;
@@ -169,22 +147,45 @@ class ClothesViewModel with ChangeNotifier {
 
     try {
       final order = _createOrderFromSelectedItems();
-      final success = await _orderService.createOrder(order);
+      final orderId = await _orderService.createOrder(order);
 
       _isSendingOrder = false;
       notifyListeners();
+      print('Order sent successfully with ID: $orderId');
 
-      return success;
+      return orderId;
     } catch (e) {
       _isSendingOrder = false;
       _error = e.toString();
       notifyListeners();
-      return false;
+      return null;
     }
   }
 
-  // Update display method
-  Map<String, dynamic> getOrderDataForDisplay() {
-    return _createOrderFromSelectedItems().toJson();
+  Future<void> addColthes(String name, int price) async {
+    try {
+      await _clothesService.addItem(name, price);
+      await loadItems();
+    } catch (e) {
+      print('Error adding item: $e');
+    }
+  }
+
+  Future<void> deleteClothes(int id) async {
+    try {
+      await _clothesService.deleteItem(id);
+      await loadItems();
+    } catch (e) {
+      print('Error deleting item: $e');
+    }
+  }
+
+  Future<void> updateClothes(int id, String name, int price) async {
+    try {
+      await _clothesService.updateItem(id, name, price);
+      await loadItems();
+    } catch (e) {
+      print('Error updating item: $e');
+    }
   }
 }

@@ -15,11 +15,6 @@ class CustomerService {
         'Authorization': 'Bearer ${_db.loadToken()}',
       },
     );
-    print('token: ${_db.loadToken()}');
-    print('response.body: ${url}');
-    print('response.statusCode: ${response.statusCode}');
-    print('response: $response');
-
     if (response.statusCode == 200) {
       final body = json.decode(response.body);
       final data = body['data'] as List;
@@ -29,7 +24,13 @@ class CustomerService {
     }
   }
 
-  Future<void> addCustomer(String name, String phone) async {
+  Future<void> addCustomer(
+    String name,
+    String surname,
+    String phone,
+    String email,
+    String address,
+  ) async {
     final url = Uri.parse(ApiPath.customer);
     final response = await http.post(
       url,
@@ -37,16 +38,77 @@ class CustomerService {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ${_db.loadToken()}',
       },
-      body: jsonEncode({'name': name, 'phone': phone}),
+      body: jsonEncode({
+        'name': name,
+        'tel': phone,
+        'email': email,
+        'address': address,
+        'surname': surname,
+      }),
     );
-    print('token: ${_db.loadToken()}');
-    print('response.body: ${url}');
+
+    print('response.body: ${response.body}');
     print('response.statusCode: ${response.statusCode}');
-    print('response: $response');
-    if (response.statusCode == 200) {
+
+    final decoded = json.decode(response.body);
+
+    if (response.statusCode == 201) {
       print('Customer added successfully');
     } else {
-      throw Exception('Failed to add customer');
+      final message =
+          decoded['message'] ?? 'Failed to add customer. Please try again.';
+      throw Exception(message);
+    }
+  }
+
+  Future<void> deleteCustomer(int id) async {
+    final url = Uri.parse("${ApiPath.customer}/$id");
+    final response = await http.delete(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${_db.loadToken()}',
+      },
+    );
+    print("DELETE URL: $url");
+    print("Status code: ${response.statusCode}");
+    print("Response body: ${response.body}");
+
+    if (response.statusCode == 204) {
+      print('Customer deleted successfully');
+    } else {
+      throw Exception('Failed to delete customer');
+    }
+  }
+
+  Future<void> updateCustomer(
+    int id,
+    String name,
+    String surname,
+    String phone,
+    String email,
+    String address,
+  ) async {
+    final url = Uri.parse("${ApiPath.customer}/$id");
+    final response = await http.put(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${_db.loadToken()}',
+      },
+      body: jsonEncode({
+        'name': name,
+        'tel': phone,
+        'email': email,
+        'address': address,
+        'surname': surname,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      print('Customer updated successfully');
+    } else {
+      throw Exception('Failed to update customer');
     }
   }
 }
