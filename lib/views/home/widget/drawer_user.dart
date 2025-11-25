@@ -3,6 +3,7 @@ import 'package:billcheck/routes/router_path.dart';
 import 'package:billcheck/viewmodel/login_view_model.dart';
 import 'package:billcheck/viewmodel/user_view_model.dart';
 import 'package:billcheck/views/history/page/history_page.dart';
+import 'package:billcheck/views/home/widget/update_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -135,9 +136,11 @@ class DrawerUser extends StatelessWidget {
                       right: -12,
                       child: IconButton(
                         onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) => updateProfileDialog(),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => UpdateProfile(),
+                            ),
                           );
                         },
                         icon: Icon(Icons.camera_alt, color: Colors.grey),
