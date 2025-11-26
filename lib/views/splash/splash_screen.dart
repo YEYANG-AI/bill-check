@@ -55,6 +55,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
       backgroundColor: Colors.white,
       body: AnimatedBuilder(
@@ -81,13 +82,16 @@ class _SplashScreenState extends State<SplashScreen>
                       return const SizedBox(width: 10); // space between words
                     }
 
+                    final startPosition = -screenHeight * 1;
+
                     // Staggered interval for each character
                     final start = (i * 0.05).clamp(0.0, 1.0);
                     final end = (start + 0.4).clamp(0.0, 1.0);
 
                     final animation =
                         Tween<double>(
-                              begin: -500, // start above the screen center
+                              begin:
+                                  startPosition, // start above the screen center
                               end: 0, // stop at the bottom of logo
                             )
                             .chain(
