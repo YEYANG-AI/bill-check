@@ -75,67 +75,151 @@ class _ClothesViewState extends State<ClothesView> {
     );
   }
 
+  Future<bool> _showModernConfirmation(
+    BuildContext context,
+    ClothesViewModel viewModel,
+  ) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.checklist_rounded,
+                      color: Colors.blue,
+                      size: 30,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'ຢືນຢັນການບັນທຶກ',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'ທ່ານຕ້ອງການບັນທຶກລາຍການໃຫ້ ${viewModel.selectedCustomer!.name} ແທ້ບໍ່?',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('ຍົກເລີກ'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'ຕົກລົງ',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ) ??
+        false;
+  }
+
+  void _showModernSnackBar(
+    BuildContext context,
+    String message, {
+    bool isError = true,
+  }) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isError ? Icons.warning_amber_rounded : Icons.info,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(message, style: const TextStyle(fontSize: 14)),
+            ),
+          ],
+        ),
+        backgroundColor: isError ? Colors.red : Colors.blue,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+    );
+  }
+
   // In your _handleSaveButton method in ClothesView
   void _handleSaveButton(
     BuildContext context,
     ClothesViewModel viewModel,
   ) async {
     if (!viewModel.hasCustomer) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('ກະລຸນາເລືອກລູກຄ້າກ່ອນ')));
+      _showModernSnackBar(context, 'ກະລຸນາເລືອກລູກຄ້າກ່ອນ');
       return;
     }
 
     if (viewModel.totalPrice == 0) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('ກະລຸນາເລືອກເຄື່ອງກ່ອນ')));
+      _showModernSnackBar(context, 'ກະລຸນາເລືອກເຄື່ອງກ່ອນ');
       return;
     }
 
-    final shouldProceed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('ຢືນຢັນການບັນທຶກ'),
-        content: Text(
-          'ທ່ານຕ້ອງການບັນທຶກລາຍການໃຫ້ ${viewModel.selectedCustomer!.name} ແທ້ບໍ່?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('ຍົກເລີກ'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('ຕົກລົງ'),
-          ),
-        ],
-      ),
-    );
+    final shouldProceed = await _showModernConfirmation(context, viewModel);
 
-    if (shouldProceed != true) return;
+    if (!shouldProceed) return;
 
     final orderId = await viewModel.sendOrder();
 
     if (orderId != null) {
-      Navigator.push(
+      Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => Bill(
-            orderId: orderId, // Only pass order ID
-            customer: viewModel.selectedCustomer!,
-          ),
+          builder: (context) =>
+              Bill(orderId: orderId, customer: viewModel.selectedCustomer!),
         ),
       ).then((_) {
         viewModel.clearAllCounts();
       });
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('ບໍ່ສາມາດສົ່ງຂໍ້ມູນ: ${viewModel.error}'),
-          backgroundColor: Colors.red,
-        ),
+      _showModernSnackBar(
+        context,
+        'ບໍ່ສາມາດສົ່ງຂໍ້ມູນ: ${viewModel.error}',
+        isError: true,
       );
     }
   }
@@ -312,64 +396,214 @@ class _ClothesViewState extends State<ClothesView> {
     final TextEditingController nameController = TextEditingController();
     final TextEditingController priceController = TextEditingController();
 
-    return AlertDialog(
-      title: const Text('ເພີ່ມລາຍການໃໝ່'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: nameController,
-            decoration: const InputDecoration(labelText: 'ຊື່ລາຍການ'),
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: priceController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'ລາຄາ'),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('ຍົກເລີກ'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            final String name = nameController.text.trim();
-            final int? price = int.tryParse(priceController.text.trim());
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header with icon
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.add_circle_outline,
+                  color: Colors.blue,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 16),
 
-            if (name.isNotEmpty && price != null && price > 0) {
-              viewModel.addColthes(name, price);
-              Navigator.pop(context);
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('ກະລຸນາໃສ່ຊື່ແລະລາຄາຖືກຕ້ອງ')),
-              );
-            }
-          },
-          child: const Text('ບັນທຶກ'),
+              // Title
+              const Text(
+                'ເພີ່ມລາຍການໃໝ່',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'ກະລຸນາໃສ່ຂໍ້ມູນລາຍການໃໝ່',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+              const SizedBox(height: 24),
+
+              // Form fields
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  labelText: 'ຊື່ລາຍການ',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  prefixIcon: const Icon(Icons.label_outline),
+                  filled: true,
+                  fillColor: Colors.grey.withOpacity(0.05),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: priceController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'ລາຄາ (ກີບ)',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  prefixIcon: const Icon(Icons.attach_money_rounded),
+                  filled: true,
+                  fillColor: Colors.grey.withOpacity(0.05),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('ຍົກເລີກ'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final String name = nameController.text.trim();
+                        final int? price = int.tryParse(
+                          priceController.text.trim(),
+                        );
+
+                        if (name.isNotEmpty && price != null && price > 0) {
+                          viewModel.addColthes(name, price);
+                          Navigator.pop(context);
+                          _showModernSnackBar(
+                            context,
+                            'ເພີ່ມລາຍການສຳເລັດ',
+                            isError: false,
+                          );
+                        } else {
+                          _showModernSnackBar(
+                            context,
+                            'ກະລຸນາໃສ່ຊື່ແລະລາຄາໃຫ້ຖືກຕ້ອງ',
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'ບັນທຶກ',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-      ],
+      ),
     );
   }
 
   Widget _clearSelectItemDialog(ClothesViewModel viewModel) {
-    return AlertDialog(
-      title: const Text('ຕ້ອງການລົບລາຍການທີ່ເລື່ອກທັງໝົດແທ້ບໍ່?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('ຍົກເລີກ'),
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Warning icon
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange,
+                size: 30,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Title
+            const Text(
+              'ຢືນຢັນການຍົກເລີກ',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'ທ່ານຕ້ອງການຍົກເລີກລາຍການທີ່ເລືອກທັງໝົດແທ້ບໍ່?',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 24),
+
+            // Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('ຍົກເລີກ'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      viewModel.clearAllCounts();
+                      Navigator.pop(context);
+                      _showModernSnackBar(
+                        context,
+                        'ຍົກເລີກລາຍການສຳເລັດ',
+                        isError: false,
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'ຢືນຢັນ',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        ElevatedButton(
-          onPressed: () {
-            viewModel.clearAllCounts();
-            Navigator.pop(context);
-          },
-          child: const Text('ຕົກລົງ'),
-        ),
-      ],
+      ),
     );
   }
 
@@ -385,7 +619,7 @@ class _ClothesViewState extends State<ClothesView> {
               onPressed: () => Navigator.pop(context),
             ),
             title: const Text(
-              'Alinda Mary Laundry',
+              'ສ້າງໃບບິນ',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -478,7 +712,7 @@ class _ClothesViewState extends State<ClothesView> {
                             );
                           },
                           child: const Text(
-                            'ລ້າງທັງໝົດ',
+                            'ຍົກເລີກທັງໝົດ',
                             style: TextStyle(color: Colors.red),
                           ),
                         ),
@@ -521,6 +755,7 @@ class _ClothesViewState extends State<ClothesView> {
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 28,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),

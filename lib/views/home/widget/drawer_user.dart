@@ -81,72 +81,51 @@ class DrawerUser extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
             child: Row(
               children: [
-                Stack(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: CircleAvatar(
-                        radius: 35,
-                        backgroundColor: Colors.white,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(35),
-                          child: user?.profile?.imageUrl != null
-                              ? Image.network(
-                                  user!.profile.imageUrl,
-                                  fit: BoxFit.cover,
-                                  width: 70,
-                                  height: 70,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Icon(
-                                      Icons.person,
-                                      size: 40,
-                                      color: Colors.grey.shade600,
-                                    );
-                                  },
-                                  loadingBuilder:
-                                      (context, child, loadingProgress) {
-                                        if (loadingProgress == null)
-                                          return child;
-                                        return CircularProgressIndicator(
-                                          value:
-                                              loadingProgress
-                                                      .expectedTotalBytes !=
-                                                  null
-                                              ? loadingProgress
-                                                        .cumulativeBytesLoaded /
-                                                    loadingProgress
-                                                        .expectedTotalBytes!
-                                              : null,
-                                        );
-                                      },
-                                )
-                              : Icon(
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: CircleAvatar(
+                    radius: 35,
+                    backgroundColor: Colors.white,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(35),
+                      child: user?.profile?.imageUrl != null
+                          ? Image.network(
+                              user!.profile.imageUrl,
+                              fit: BoxFit.cover,
+                              width: 70,
+                              height: 70,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(
                                   Icons.person,
                                   size: 40,
                                   color: Colors.grey.shade600,
-                                ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: -14,
-                      right: -12,
-                      child: IconButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => UpdateProfile(),
+                                );
+                              },
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return CircularProgressIndicator(
+                                      value:
+                                          loadingProgress.expectedTotalBytes !=
+                                              null
+                                          ? loadingProgress
+                                                    .cumulativeBytesLoaded /
+                                                loadingProgress
+                                                    .expectedTotalBytes!
+                                          : null,
+                                    );
+                                  },
+                            )
+                          : Icon(
+                              Icons.person,
+                              size: 40,
+                              color: Colors.grey.shade600,
                             ),
-                          );
-                        },
-                        icon: Icon(Icons.camera_alt, color: Colors.grey),
-                      ),
                     ),
-                  ],
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Column(
@@ -203,14 +182,12 @@ class DrawerUser extends StatelessWidget {
                   },
                 ),
                 _buildDrawerItem(
-                  icon: Icons.history_rounded,
-                  text: 'ປະຫວັດ',
+                  icon: Icons.edit,
+                  text: 'ແກ້ໄຂໂປຣໄຟລ໌',
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => const HistoryPage(),
-                      ),
+                      MaterialPageRoute(builder: (context) => UpdateProfile()),
                     );
                   },
                 ),

@@ -3,7 +3,7 @@ import 'package:billcheck/views/Auth/login/view/login_view.dart';
 import 'package:billcheck/views/bill/view/bill.dart';
 import 'package:billcheck/views/clothes/view/clothes_management.dart';
 import 'package:billcheck/views/customers/view/create_bill.dart';
-import 'package:billcheck/views/customers/view/customer_page.dart';
+import 'package:billcheck/views/customers/view/customer_view.dart';
 import 'package:billcheck/views/home/view/home_view.dart';
 import 'package:billcheck/views/home/widget/dashboard.dart';
 import 'package:billcheck/views/clothes/view/clothes_view.dart';

@@ -21,7 +21,8 @@ class _UpdateProfileState extends State<UpdateProfile> {
   String? imageId;
 
   File? pickedImage;
-  bool isUploading = false;
+  bool _isUploading = false;
+  bool _isUpdating = false;
 
   Future<void> pickImage() async {
     final picker = ImagePicker();
@@ -39,30 +40,94 @@ class _UpdateProfileState extends State<UpdateProfile> {
       // Upload image immediately and get image ID
       try {
         setState(() {
-          isUploading = true;
+          _isUploading = true;
         });
 
         final userProvider = Provider.of<UserViewModel>(context, listen: false);
-
         final imageId = await userProvider.uploadImageOnly(pickedImage!);
 
         setState(() {
-          isUploading = false;
+          _isUploading = false;
           this.imageId = imageId;
         });
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('ອັບໂຫຼດຮູບສຳເລັດ')));
+        _showModernSnackBar(context, 'ອັບໂຫຼດຮູບສຳເລັດ', isError: false);
       } catch (e) {
         setState(() {
-          isUploading = false;
+          _isUploading = false;
         });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('ບໍ່ສາມາດອັບໂຫຼດຮູບ: $e')));
+        _showModernSnackBar(context, 'ບໍ່ສາມາດອັບໂຫຼດຮູບ: $e');
       }
     }
+  }
+
+  Future<void> _updateProfile() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        setState(() {
+          _isUpdating = true;
+        });
+
+        final userProvider = Provider.of<UserViewModel>(context, listen: false);
+        final user = userProvider.user;
+
+        await userProvider.updateProfile(
+          name: name,
+          surname: surname,
+          email: email,
+          tel: tel,
+          image: imageId ?? user?.profile?.image,
+        );
+
+        setState(() {
+          _isUpdating = false;
+        });
+
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => Dashboard()),
+          );
+          _showModernSnackBar(context, 'ອັບເດດໂປຣໄຟລ໌ສຳເລັດ', isError: false);
+        }
+      } catch (e) {
+        setState(() {
+          _isUpdating = false;
+        });
+        _showModernSnackBar(context, 'ອັບເດດບໍ່ສຳເລັດ: $e');
+      }
+    }
+  }
+
+  void _showModernSnackBar(
+    BuildContext context,
+    String message, {
+    bool isError = true,
+  }) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isError
+                  ? Icons.warning_amber_rounded
+                  : Icons.check_circle_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(message, style: const TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   @override
@@ -79,124 +144,263 @@ class _UpdateProfileState extends State<UpdateProfile> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: _isUpdating ? null : () => Navigator.pop(context),
         ),
-        title: const Text('ອັບເດດໂປຣໄຟລ໌'),
+        title: Text(
+          _isUpdating ? 'ກຳລັງອັບເດດ...' : 'ອັບເດດໂປຣໄຟລ໌',
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
         centerTitle: true,
         backgroundColor: Colors.blue,
       ),
-      body: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            child: Column(
-              children: [
-                // Profile image
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: Colors.grey.shade200,
-                  child: pickedImage != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(40),
-                          child: Image.file(
-                            pickedImage!,
-                            width: 80,
-                            height: 80,
-                            fit: BoxFit.cover,
+      body: IgnorePointer(
+        ignoring: _isUpdating,
+        child: Opacity(
+          opacity: _isUpdating ? 0.6 : 1.0,
+          child: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 32,
+                ),
+                child: Column(
+                  children: [
+                    // Profile image section
+                    Stack(
+                      children: [
+                        Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.blue.withOpacity(0.3),
+                              width: 3,
+                            ),
                           ),
-                        )
-                      : (user?.profile?.imageUrl != null
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(40),
-                                child: Image.network(
-                                  user!.profile.imageUrl,
-                                  width: 80,
-                                  height: 80,
-                                  fit: BoxFit.cover,
+                          child: Stack(
+                            children: [
+                              CircleAvatar(
+                                radius: 56,
+                                backgroundColor: Colors.grey.shade200,
+                                child: _isUploading
+                                    ? const CircularProgressIndicator(
+                                        color: Colors.blue,
+                                        strokeWidth: 3,
+                                      )
+                                    : pickedImage != null
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(56),
+                                        child: Image.file(
+                                          pickedImage!,
+                                          width: 112,
+                                          height: 112,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      )
+                                    : (user?.profile?.imageUrl != null
+                                          ? ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(56),
+                                              child: Image.network(
+                                                user!.profile.imageUrl,
+                                                width: 112,
+                                                height: 112,
+                                                fit: BoxFit.cover,
+                                                errorBuilder:
+                                                    (
+                                                      context,
+                                                      error,
+                                                      stackTrace,
+                                                    ) {
+                                                      return const Icon(
+                                                        Icons.person,
+                                                        size: 50,
+                                                        color: Colors.grey,
+                                                      );
+                                                    },
+                                              ),
+                                            )
+                                          : const Icon(
+                                              Icons.person,
+                                              size: 50,
+                                              color: Colors.grey,
+                                            )),
+                              ),
+                              if (_isUploading)
+                                Container(
+                                  width: 112,
+                                  height: 112,
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.5),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: GestureDetector(
+                            onTap: _isUploading ? null : pickImage,
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: _isUploading ? Colors.grey : Colors.blue,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 3,
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.camera_alt_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _isUploading ? 'ກຳລັງອັບໂຫຼດຮູບ...' : 'ປ່ຽນຮູບພາບ',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: _isUploading ? Colors.grey : Colors.blue,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Form fields
+                    TextFormField(
+                      initialValue: name,
+                      decoration: InputDecoration(
+                        labelText: 'ຊື່',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: const Icon(Icons.person_outline),
+                        filled: true,
+                        fillColor: Colors.grey.withOpacity(0.05),
+                      ),
+                      onChanged: (val) => name = val,
+                      validator: (val) =>
+                          val == null || val.isEmpty ? 'ກະລຸນາໃສ່ຊື່' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      initialValue: surname,
+                      decoration: InputDecoration(
+                        labelText: 'ນາມສະກຸນ',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: const Icon(Icons.person_outlined),
+                        filled: true,
+                        fillColor: Colors.grey.withOpacity(0.05),
+                      ),
+                      onChanged: (val) => surname = val,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      initialValue: email,
+                      decoration: InputDecoration(
+                        labelText: 'ອີເມວ',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: const Icon(Icons.email_rounded),
+                        filled: true,
+                        fillColor: Colors.grey.withOpacity(0.05),
+                      ),
+                      onChanged: (val) => email = val,
+                      validator: (val) =>
+                          val == null || val.isEmpty ? 'ກະລຸນາໃສ່ອີເມວ' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      initialValue: tel,
+                      decoration: InputDecoration(
+                        labelText: 'ເບີໂທລະສັບ',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: const Icon(Icons.phone_rounded),
+                        filled: true,
+                        fillColor: Colors.grey.withOpacity(0.05),
+                      ),
+                      keyboardType: TextInputType.phone,
+                      onChanged: (val) => tel = val,
+                    ),
+                    const SizedBox(height: 40),
+
+                    // Update button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isUpdating ? null : _updateProfile,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: _isUpdating
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 3,
                                 ),
                               )
-                            : Icon(Icons.person, size: 40)),
-                ),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: pickImage,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      color: Colors.blue.shade50,
+                            : const Text(
+                                'ອັບເດດໂປຣໄຟລ໌',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                      ),
                     ),
-                    child: Text('ປ່ຽນຮູບພາບ'),
-                  ),
+
+                    // Loading message
+                    if (_isUpdating) ...[
+                      const SizedBox(height: 20),
+                      const Text(
+                        'ກະລຸນາລໍຖ້າການອັບເດດ...',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.orange,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 16),
-                // Name
-                TextFormField(
-                  initialValue: name,
-                  decoration: const InputDecoration(labelText: 'Name'),
-                  onChanged: (val) => name = val,
-                  validator: (val) =>
-                      val == null || val.isEmpty ? 'ຕ້ອງປ້ອນຊື່' : null,
-                ),
-                const SizedBox(height: 8),
-                // Surname
-                TextFormField(
-                  initialValue: surname,
-                  decoration: const InputDecoration(labelText: 'Surname'),
-                  onChanged: (val) => surname = val,
-                ),
-                const SizedBox(height: 8),
-                // Email
-                TextFormField(
-                  initialValue: email,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                  onChanged: (val) => email = val,
-                  validator: (val) =>
-                      val == null || val.isEmpty ? 'ຕ້ອງປ້ອນອີເມວ' : null,
-                ),
-                const SizedBox(height: 8),
-                // Tel
-                TextFormField(
-                  initialValue: tel,
-                  decoration: const InputDecoration(labelText: 'Tel'),
-                  onChanged: (val) => tel = val,
-                ),
-                if (isUploading)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8),
-                    child: LinearProgressIndicator(),
-                  ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () async {
-                    if (_formKey.currentState!.validate()) {
-                      try {
-                        await userProvider.updateProfile(
-                          name: name,
-                          surname: surname,
-                          email: email,
-                          tel: tel,
-                          image:
-                              imageId ?? user?.profile?.image, // send image ID
-                        );
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (context) => Dashboard()),
-                        );
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text('ອັບເດດສຳເລັດ')));
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('ອັບເດດບໍ່ສຳເລັດ: $e')),
-                        );
-                      }
-                    }
-                  },
-                  child: const Text('ອັບເດດ'),
-                ),
-              ],
+              ),
             ),
           ),
         ),

@@ -1,4 +1,5 @@
 import 'package:billcheck/model/history_model.dart';
+import 'package:billcheck/views/home/widget/drawer_user.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:billcheck/viewmodel/history_view_model.dart';
@@ -11,6 +12,7 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -268,7 +270,14 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.menu, color: Colors.white),
+          onPressed: () {
+            _scaffoldKey.currentState?.openDrawer();
+          },
+        ),
         backgroundColor: Colors.blue,
         title: const Text(
           'ປະຫວັດການໃຊ້ງານ',
@@ -276,6 +285,7 @@ class _HistoryPageState extends State<HistoryPage> {
         ),
         centerTitle: true,
       ),
+      drawer: DrawerUser(),
       body: Consumer<HistoryViewModel>(
         builder: (context, viewModel, child) {
           if (viewModel.isLoading && viewModel.orders.isEmpty) {

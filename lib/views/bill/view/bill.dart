@@ -179,7 +179,7 @@ class _BillState extends State<Bill> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               Text(
-                'ຈຳນວນ',
+                'ລວມ',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ],
@@ -187,48 +187,60 @@ class _BillState extends State<Bill> {
         ),
         const SizedBox(height: 8),
 
-        // Order items from API
-        ...order.details.map(
-          (detail) => ListTile(
-            leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Center(
-                child: Text(
-                  '${detail.quantity ?? 0}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
+        // Order items from API - Scrollable section
+        Container(
+          height: 150, // Set a fixed height or use constraints
+          child: ListView(
+            shrinkWrap: true,
+            children: order.details
+                .map(
+                  (detail) => ListTile(
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${detail.quantity ?? 0}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ),
+                    ),
+                    title: Text(detail.clothes.name ?? 'ບໍ່ຮູ້ຊື່ສິນຄ້າ'),
+                    subtitle: detail.clothes.price != null
+                        ? Text(
+                            'ລາຄາ: ${detail.clothes.price!.toStringAsFixed(0)} ກີບ',
+                          )
+                        : const Text('ບໍ່ມີລາຄາ'),
+                    trailing: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${(detail.total ?? 0).toStringAsFixed(0)} ກີບ',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        if ((detail.vat ?? 0) > 0)
+                          Text(
+                            'VAT ${((detail.vat ?? 0) * 100).toStringAsFixed(0)}%',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-              ),
-            ),
-            title: Text(detail.clothes.name ?? 'ບໍ່ຮູ້ຊື່ສິນຄ້າ'),
-            subtitle: detail.clothes.price != null
-                ? Text('ລາຄາ: ${detail.clothes.price!.toStringAsFixed(0)} ກີບ')
-                : const Text('ບໍ່ມີລາຄາ'),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '${(detail.total ?? 0).toStringAsFixed(0)} ກີບ',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                if ((detail.vat ?? 0) > 0)
-                  Text(
-                    'VAT ${((detail.vat ?? 0) * 100).toStringAsFixed(0)}%',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-              ],
-            ),
+                )
+                .toList(),
           ),
         ),
-
         const SizedBox(height: 16),
 
         // Order Summary (like history page)
