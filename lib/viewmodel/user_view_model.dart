@@ -23,7 +23,7 @@ class UserViewModel extends ChangeNotifier {
   Future<void> loadUserProfile() async {
     _isLoading = true;
     _error = '';
-    notifyListeners();
+    // notifyListeners();
 
     print('🔄 UserViewModel: Starting to load user profile...');
 
@@ -142,6 +142,29 @@ class UserViewModel extends ChangeNotifier {
     }
   }
 
+  // Change password
+  Future<void> changePassword({
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    _isLoading = true;
+    _error = '';
+    notifyListeners();
+
+    try {
+      await _userService.changePassword(
+        newPassword: newPassword,
+        confirmPassword: confirmPassword,
+        userId: _user!.id.toString(),
+      );
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
   void clearError() {
     _error = '';

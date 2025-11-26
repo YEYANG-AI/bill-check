@@ -3,6 +3,7 @@ import 'package:billcheck/routes/router_path.dart';
 import 'package:billcheck/viewmodel/login_view_model.dart';
 import 'package:billcheck/viewmodel/user_view_model.dart';
 import 'package:billcheck/views/history/page/history_page.dart';
+import 'package:billcheck/views/home/widget/change_password.dart';
 import 'package:billcheck/views/home/widget/update_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -188,6 +189,16 @@ class DrawerUser extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => UpdateProfile()),
+                    );
+                  },
+                ),
+                _buildDrawerItem(
+                  icon: Icons.lock,
+                  text: 'ປ່ຽນລະຫັດຜ່ານ',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => ChangePassword()),
                     );
                   },
                 ),

@@ -194,4 +194,63 @@ class UserService {
       throw Exception('Failed to update profile with image: $e');
     }
   }
+
+  // services/user_service.dart - Fixed changePassword method
+  Future<void> changePassword({
+    required String newPassword,
+    required String confirmPassword,
+    required String userId,
+  }) async {
+    final url = Uri.parse('${ApiPath.changePassword}/$userId');
+    final token = _db.loadToken();
+
+    if (token == null) {
+      throw Exception('No authentication token found');
+    }
+
+    // Use the exact field names that the API expects
+    final passwordData = {
+      'new_password': newPassword,
+      'confirm_password': confirmPassword,
+    };
+
+    print('🔒 Changing password for user: $userId');
+    print('🌐 URL: $url');
+    print('📦 Request data: $passwordData');
+
+    final response = await http.put(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode(passwordData),
+    );
+
+    final responseBody = json.decode(response.body);
+    print('📡 Change Password Response: $responseBody');
+
+    if (response.statusCode == 200) {
+      print('✅ Password changed successfully');
+    } else if (response.statusCode == 422) {
+      // Handle validation errors specifically
+      final errors = responseBody['errors'];
+      if (errors != null) {
+        final errorMessages = [];
+        errors.forEach((key, value) {
+          if (value is List) {
+            errorMessages.addAll(value.cast<String>());
+          }
+        });
+        throw Exception(errorMessages.join(', '));
+      } else {
+        throw Exception(responseBody['message'] ?? 'Validation failed');
+      }
+    } else {
+      throw Exception(
+        responseBody['message'] ??
+            'Failed to change password: ${response.statusCode}',
+      );
+    }
+  }
 }
